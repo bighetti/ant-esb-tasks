@@ -1,0 +1,118 @@
+<project name="ant-esb">
+    <!-- =============================================================================================================== -->
+	<!-- jsch.jar must be added to ANT_HOME/lib                                                                          -->
+	<!-- http://ant.apache.org/manual/install.html#librarydependencies                                                   -->
+	<!-- =============================================================================================================== -->
+
+	<path id="path.tasks">
+		<fileset dir="target" includes="ant-esb.jar" />
+	</path>
+
+	<property file="${alias}.properties" />
+	<property file="build.properties" />
+
+	<condition property="preview.mode">
+		<equals arg1="${preview}" arg2="true" />
+	</condition>
+
+	<!-- =============================================================================================================== -->
+	<!-- build                                                                                                           -->
+	<!-- =============================================================================================================== -->
+	<target name="build" description="build">
+		<mkdir dir="target/classes" />
+		<javac srcdir="src/main/java" destdir="target/classes" includeantruntime="true" />
+		<copy todir="target/classes">
+			<fileset dir="src/main/resources" />
+		</copy>
+		<jar destfile="target/ant-esb.jar" basedir="target/classes" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- clean                                                                                                           -->
+	<!-- =============================================================================================================== -->
+	<target name="clean" description="clean">
+		<delete dir="target" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- esb.start                                                                                                       -->
+	<!-- =============================================================================================================== -->
+	<target name="esb.start" depends="init" description="start the esb" unless="preview.mode">
+		<sshexec trust="true" host="${host}" port="${ssh.port}" username="${ssh.user}" keyfile="${ssh.keyfile}" command="${command.start}" />
+		<echo message="Waiting for ESB to start..." />
+		<waitfor checkevery="5000" maxwait="${maxwait.start}" timeoutproperty="waitfor.start">
+			<and>
+				<http url="${url.karaf}" errorsBeginAt="404" />
+			</and>
+		</waitfor>
+
+		<fail if="waitfor.start" message="Failed waiting for the ESB to start" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- esb.stop                                                                                                        -->
+	<!-- =============================================================================================================== -->
+	<target name="esb.stop" depends="init" description="stop the esb" unless="preview.mode">
+		<sshexec trust="true" host="${host}" port="${ssh.port}" username="${ssh.user}" keyfile="${ssh.keyfile}" command="${command.stop}" failonerror="false" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- info                                                                                                            -->
+	<!-- =============================================================================================================== -->
+	<target name="info" depends="init" description="print the esb information">
+		<sshexec trust="true" host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" command="info" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- init                                                                                                            -->
+	<!-- =============================================================================================================== -->
+	<target name="init">
+		<taskdef resource="bighetti/tasks.properties" classpathref="path.tasks" />
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- list                                                                                                            -->
+	<!-- =============================================================================================================== -->
+	<target name="list" depends="init" description="list the bundles">
+		<karaf host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" preview="${preview}">
+			<listbundles outputproperty="esb.list" />
+		</karaf>
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- refresh                                                                                                         -->
+	<!-- =============================================================================================================== -->
+	<target name="refresh" depends="init" description="refresh a bundle">
+		<karaf host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" preview="${preview}">
+			<refreshbundle id="${id}" />
+		</karaf>
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- restart                                                                                                         -->
+	<!-- =============================================================================================================== -->
+	<target name="restart" depends="init" description="restart a bundle">
+		<karaf host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" preview="${preview}">
+			<restartbundle id="${id}" />
+		</karaf>
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- start                                                                                                           -->
+	<!-- =============================================================================================================== -->
+	<target name="start" depends="init" description="start a bundle">
+		<karaf host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" preview="${preview}">
+			<startbundle id="${id}" failExistingState="${failExistingState}" />
+		</karaf>
+	</target>
+
+	<!-- =============================================================================================================== -->
+	<!-- stop                                                                                                            -->
+	<!-- =============================================================================================================== -->
+	<target name="stop" depends="init" description="stop a bundle">
+		<karaf host="${host}" port="${karaf.port}" username="${karaf.user}" keyfile="${karaf.keyfile}" preview="${preview}">
+			<stopbundle id="${id}" failExistingState="${failExistingState}" />
+		</karaf>
+	</target>
+
+</project>
